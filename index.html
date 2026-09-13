@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vinyl Hunter & Tidal Player</title>
+  <!-- Librería para escanear código de barras -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    :root {
+      --bg: #0e0e11;
+      --card-bg: #18181c;
+      --card-hover: #222228;
+      --text: #ffffff;
+      --text-sub: #a0a0ab;
+      --tidal-cyan: #00f0ff;
+      --accent-purple: #7928ca;
+      --danger: #ff007f;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 10px 0 15px 0;
+      text-align: center;
+      background: linear-gradient(90deg, #fff, var(--tidal-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn-camera {
+      background: linear-gradient(135deg, #00f0ff, #7928ca);
+      color: #000;
+      font-weight: bold;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
+    }
+
+    .btn-camera:active {
+      transform: scale(0.98);
+    }
+
+    #scanner-container {
+      width: 100%;
+      display: none;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--tidal-cyan);
+    }
+
+    .search-box-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background-color: var(--card-bg);
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #282830;
+    }
+
+    .search-type-selector {
+      display: flex;
+      gap: 6px;
+    }
+
+    .search-type-selector button {
+      flex: 1;
+      background: #25252e;
+      border: 1px solid #333340;
+      color: var(--text-sub);
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .search-type-selector button.active {
+      background: var(--tidal-cyan);
+      color: #000;
+      border-color: var(--tidal-cyan);
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      background: #101014;
+      border: 1px solid #333340;
+      color: #fff;
+      padding: 12px 40px 12px 14px;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    .input-wrapper input:focus {
+      border-color: var(--tidal-cyan);
+    }
+
+    .btn-search {
+      background-color: var(--tidal-cyan);
+      color: #000;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .status-msg {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-sub);
+      margin: 10px 0;
+
+    }
+
+    .results-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid #282830;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .card:hover, .card:active {
+      background-color: var(--card-hover);
+      border-color: var(--tidal-cyan);
+      transform: translateY(-2px);
+    }
+
+    .card img {
+      width: 65px;
+      height: 65px;
+      object-fit: cover;
+      border-radius: 8px;
+      background-color: #000;
+      flex-shrink: 0;
+    }
+
+    .card-info {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .card-title {
+      font-weight: bold;
+      font-size: 14px;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .card-details {
+      font-size: 11px;
+      color: var(--text-sub);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .tidal-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0, 240, 255, 0.1);
+      color: var(--tidal-cyan);
+      border: 1px solid var(--tidal-cyan);
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    #btn-stop-cam {
+      background: var(--danger);
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      display: none;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Vinyl Hunter 🛒 ➔ 🎵 Tidal</h1>
+
+  <div class="container">
+    
+    <!-- Botón Cámara -->
+    <button class="btn-camera" onclick="startScanner()">
+      📷 Escanear Código de Barras
+    </button>
+
+    <!-- Contenedor Lector Cámara -->
+    <div id="scanner-container">
+      <div id="reader"></div>
+      <button id="btn-stop-cam" onclick="stopScanner()">✖ Cancelar Cámara</button>
+    </div>
+
+    <!-- Buscador Manual -->
+    <div class="search-box-container">
+      <div class="search-type-selector">
+        <button id="tab-q" class="active" onclick="setSearchType('q')">Título / Artista</button>
+        <button id="tab-catno" onclick="setSearchType('catno')">Ref. Catálogo / Matriz</button>
+        <button id="tab-barcode" onclick="setSearchType('barcode')">Cód. Barras</button>
+      </div>
+
+      <div class="input-wrapper">
+        <input type="text" id="search-input" placeholder="Ej: Pink Floyd The Dark Side of the Moon" onkeydown="if(event.key==='Enter') triggerSearch()">
+      </div>
+
+      <button class="btn-search" onclick="triggerSearch()">🔍 Buscar en Discogs</button>
+    </div>
+
+    <!-- Mensaje de Estado / Carga -->
+    <div id="status-msg" class="status-msg">Busca un vinilo para ver las opciones y reproducirlo en Tidal.</div>
+
+    <!-- Lista de Resultados -->
+    <div id="results-list" class="results-list"></div>
+
+  </div>
+
+  <script>
+    const DISCOGS_TOKEN = "CWKqEUOhuHGVWlYnpZzwXXhiGSAqGjBUrbPiYEjM";
+    let searchType = 'q'; // 'q', 'catno', 'barcode'
+    let html5QrcodeScanner = null;
+
+    function setSearchType(type) {
+      searchType = type;
+      document.querySelectorAll('.search-type-selector button').forEach(b => b.classList.remove('active'));
+      document.getElementById(`tab-${type}`).classList.add('active');
+
+      const input = document.getElementById('search-input');
+      if (type === 'q') input.placeholder = "Ej: Queen A Night at the Opera";
+      if (type === 'catno') input.placeholder = "Ej: PC 33795 o SW-11921";
+      if (type === 'barcode') input.placeholder = "Ej: 077774600125";
+      input.focus();
+    }
+
+    function triggerSearch() {
+      const query = document.getElementById('search-input').value.trim();
+      if (!query) return;
+      searchDiscogs(query, searchType);
+    }
+
+    async function searchDiscogs(query, type) {
+      const statusMsg = document.getElementById('status-msg');
+      const resultsList = document.getElementById('results-list');
+      
+      statusMsg.innerHTML = "🔎 Buscando ediciones en Discogs...";
+      resultsList.innerHTML = "";
+
+      let paramKey = 'q';
+      if (type === 'catno') paramKey = 'catno';
+      if (type === 'barcode') paramKey = 'barcode';
+
+      const url = `https://api.discogs.com/database/search?${paramKey}=${encodeURIComponent(query)}&type=release&token=${DISCOGS_TOKEN}`;
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.results && data.results.length > 0) {
+          statusMsg.innerHTML = `Se encontraron <b>${data.results.length}</b> ediciones. Pulsa una para abrirla en <b>Tidal</b>:`;
+          renderResults(data.results);
+        } else {
+          statusMsg.innerHTML = "❌ No se encontraron resultados en Discogs.";
+        }
+      } catch (err) {
+        statusMsg.innerHTML = "⚠️ Error de conexión con Discogs.";
+        console.error(err);
+      }
+    }
+
+    function renderResults(results) {
+      const resultsList = document.getElementById('results-list');
+      resultsList.innerHTML = "";
+
+      results.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        // Al pulsar la tarjeta, busca automáticamente en Tidal
+        card.onclick = () => openInTidal(item.title);
+
+        const coverImg = item.cover_image || item.thumb || 'https://via.placeholder.com/65?text=Sin+Tapa';
+        const year = item.year || 'N/A';
+        const country = item.country || 'N/A';
+        const label = item.label ? item.label[0] : 'N/A';
+        const catno = item.catno || 'N/A';
+        const format = item.format ? item.format.join(', ') : 'Vinilo';
+
+        card.innerHTML = `
+          <img src="${coverImg}" alt="Portada">
+          <div class="card-info">
+            <div class="card-title">${item.title}</div>
+            <div class="card-details">
+              <span>📅 <b>Año:</b> ${year} | 🌍 <b>País:</b> ${country}</span>
+              <span>🏷️ <b>Sello:</b> ${label} (${catno})</span>
+              <span>💿 <b>Formato:</b> ${format}</span>
+            </div>
+          </div>
+          <div class="tidal-badge">
+            🎵 Tidal
+          </div>
+        `;
+
+        resultsList.appendChild(card);
+      });
+    }
+
+    function openInTidal(fullTitle) {
+      // Limpia corchetes o información extra para afinar la búsqueda en Tidal
+      const cleanTitle = fullTitle.replace(/[\(\[\^].*?[\)\]]/g, '').trim();
+      
+      // Enlace universal a Tidal que abre la app en móviles o la web en escritorio
+      const tidalUrl = `https://listen.tidal.com/search?q=${encodeURIComponent(cleanTitle)}`;
+      
+      window.location.href = tidalUrl;
+    }
+
+    /* LECTOR CÓDIGO DE BARRAS CON CÁMARA */
+    function startScanner() {
+      const container = document.getElementById('scanner-container');
+      const stopBtn = document.getElementById('btn-stop-cam');
+      container.style.display = 'block';
+      stopBtn.style.display = 'block';
+
+      html5QrcodeScanner = new Html5Qrcode("reader");
+
+      const config = { 
+        fps: 15, 
+        qrbox: { width: 280, height: 120 },
+        formatsToSupport: [ 
+          Html5QrcodeSupportedFormats.EAN_13, 
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E, 
+          Html5QrcodeSupportedFormats.EAN_8 
+        ]
+      };
+
+      html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
+        .catch(err => { 
+          alert("Error al acceder a la cámara: " + err); 
+          stopScanner(); 
+        });
+    }
+
+    function stopScanner() {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+          document.getElementById('scanner-container').style.display = 'none';
+          document.getElementById('btn-stop-cam').style.display = 'none';
+        }).catch(() => {});
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      stopScanner();
+      document.getElementById('search-input').value = decodedText;
+      setSearchType('barcode');
+      searchDiscogs(decodedText, 'barcode');
+    }
+  </script>
+</body>
+</html>
