@@ -132,6 +132,25 @@
       border-color: var(--tidal-cyan);
     }
 
+    .btn-clear {
+      position: absolute;
+      right: 12px;
+      background: transparent;
+      border: none;
+      color: var(--text-sub);
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      display: none;
+      padding: 4px;
+      line-height: 1;
+      border-radius: 50%;
+    }
+
+    .btn-clear:hover {
+      color: #fff;
+    }
+
     .btn-search {
       background-color: var(--tidal-cyan);
       color: #000;
@@ -148,7 +167,6 @@
       font-size: 13px;
       color: var(--text-sub);
       margin: 10px 0;
-
     }
 
     .results-list {
@@ -261,7 +279,14 @@
       </div>
 
       <div class="input-wrapper">
-        <input type="text" id="search-input" placeholder="Ej: Pink Floyd The Dark Side of the Moon" onkeydown="if(event.key==='Enter') triggerSearch()">
+        <input 
+          type="text" 
+          id="search-input" 
+          placeholder="Ej: Pink Floyd The Dark Side of the Moon" 
+          oninput="toggleClearBtn()" 
+          onkeydown="if(event.key==='Enter') triggerSearch()"
+        >
+        <button id="btn-clear" class="btn-clear" onclick="clearSearchInput()" title="Borrar texto">✕</button>
       </div>
 
       <button class="btn-search" onclick="triggerSearch()">🔍 Buscar en Discogs</button>
@@ -279,6 +304,19 @@
     const DISCOGS_TOKEN = "CWKqEUOhuHGVWlYnpZzwXXhiGSAqGjBUrbPiYEjM";
     let searchType = 'q'; // 'q', 'catno', 'barcode'
     let html5QrcodeScanner = null;
+
+    function toggleClearBtn() {
+      const input = document.getElementById('search-input');
+      const clearBtn = document.getElementById('btn-clear');
+      clearBtn.style.display = input.value.trim().length > 0 ? 'block' : 'none';
+    }
+
+    function clearSearchInput() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      toggleClearBtn();
+      input.focus();
+    }
 
     function setSearchType(type) {
       searchType = type;
@@ -412,7 +450,9 @@
 
     function onScanSuccess(decodedText) {
       stopScanner();
-      document.getElementById('search-input').value = decodedText;
+      const input = document.getElementById('search-input');
+      input.value = decodedText;
+      toggleClearBtn();
       setSearchType('barcode');
       searchDiscogs(decodedText, 'barcode');
     }
